@@ -110,7 +110,7 @@ int checkHash(char* commandString, char* filePath, char* hash)
 		maxInput = strlen(filePath);
 	}
 	
-	strncat(command, commandString, strlen(commandString));
+	strcat(command, commandString);
 	strncat(command, filePath, maxInput);
 
 	//get md5 hash
@@ -178,7 +178,7 @@ void printHelpText()
 	printf("sha512\n");
 }
 
-//sanitize string (escape with quotes to prevent attacks)
+//sanitize string (escape with quotes to hopefully prevent attacks)
 void sanitize(char* dest, char* src, int sz)
 {
 	memset(dest, 0, sz);
