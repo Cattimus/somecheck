@@ -3,11 +3,16 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-void printHelpText();
-int checkMd5(char* filePath, char* hash, int ignoreCase);
-int checkHash(char* hashA, char* hashB, int ignoreCase);
-void getHash(char* dest, char* commandString, int sz);
+#define BUFF_SIZE 1024
+
+
+int checkHash(char* commandString, char* filePath, char* hash);
+int checkMatch(char* hashA, char* hashB);
 void sanitize(char* dest, char* src, int sz);
+void printHelpText();
+
+int ignoreCase = 0;
+int showOutput = 0;
 
 //intended usage: somecheck [checksum_version] [filename] [hash] --options
 //supported checksums: md5 sha1 sha256 sha512
@@ -43,9 +48,6 @@ int main(int argc, char* argv[])
 	sanitize(filePath, argv[2], 256);
 	char* hash = argv[3];
 
-	//extended options
-	int ignoreCase = 0;
-
 	//grab extended options
 	if(argc > 4)
 	{
@@ -55,15 +57,32 @@ int main(int argc, char* argv[])
 			{
 				ignoreCase = 1;
 			}
+
+			if(!strcmp(argv[i], "--show"))
+			{
+				showOutput = 1;
+			}
 		}
 	}
 
 	int results = 0;
 
-	//md5 hash check
+	//hash checks
 	if(!strcmp(checksumVersion, "md5"))
 	{
-		results = checkMd5(filePath, hash, ignoreCase);
+		results = checkHash("md5sum ", filePath, hash);
+	}
+	else if(!strcmp(checksumVersion, "sha1"))
+	{
+		results = checkHash("sha1sum ", filePath, hash);
+	}
+	else if(!strcmp(checksumVersion, "sha256"))
+	{
+		results = checkHash("sha256sum ", filePath, hash);
+	}
+	else if(!strcmp(checksumVersion, "sha512"))
+	{
+		results = checkHash("sha512sum ", filePath, hash);
 	}
 
 	if(results)
@@ -78,49 +97,48 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-//check md5
-int checkMd5(char* filePath, char* hash, int ignoreCase)
+//check with a given hash function if the inputted hash matches
+int checkHash(char* commandString, char* filePath, char* hash)
 {
 	//assemble command
-	char command[512];
-	memset(command, 0, 512);
+	char command[BUFF_SIZE];
+	memset(command, 0, BUFF_SIZE);
 
-	int maxInput = 512 - 8;
+	int maxInput = BUFF_SIZE - strlen(commandString);
 	if(strlen(filePath) < maxInput)
 	{
 		maxInput = strlen(filePath);
 	}
 	
-	strncat(command, "md5sum ", 8);
+	strncat(command, commandString, strlen(commandString));
 	strncat(command, filePath, maxInput);
 
 	//get md5 hash
-	char results[512];
-	memset(results, 0, 512);
-	getHash(results, command, 512);
+	char results[BUFF_SIZE];
+	memset(results, 0, BUFF_SIZE);
 
-	printf("raw output: %s", results);
-	printf("input hash: %s\n", hash);
-
-	return checkHash(results, hash, ignoreCase);
-}
-
-void getHash(char* dest, char* command, int sz)
-{
 	FILE* process = popen(command, "r");
 	if(process == NULL)
 	{
-		fprintf(stderr, "Failed to open process md5sum.\n");
+		fprintf(stderr, "Failed to open process %s.\n", commandString);
 		exit(1);
 	}
 	
 	//read result into buffer
-	fgets(dest, sz, process);
+	fgets(results, BUFF_SIZE, process);
 	pclose(process);
+
+	if(showOutput)
+	{
+		printf("Raw output: %s", results);
+		printf("User Input: %s\n", hash);
+	}
+
+	return checkMatch(results, hash);
 }
 
 //check if the two hashes are identical
-int checkHash(char* hashA, char* hashB, int ignoreCase)
+int checkMatch(char* hashA, char* hashB)
 {
 	int maxlen = strlen(hashA);
 	if(strlen(hashB) < maxlen)
