@@ -5,10 +5,9 @@
 
 #define BUFF_SIZE 1024
 
-
-int checkHash(char* commandString, char* filePath, char* hash);
-int checkMatch(char* hashA, char* hashB);
-void sanitize(char* dest, char* src, int sz);
+int checkHash(const char* commandString, const char* filePath, char* hash);
+int checkMatch(const char* hashA, const char* hashB);
+void sanitize(char* dest, const char* src, int sz);
 void printHelpText();
 
 int ignoreCase = 0;
@@ -41,6 +40,15 @@ int main(int argc, char* argv[])
 		printHelpText();
 		exit(1);
 	}
+
+	//verify file exists
+	FILE* fileTest = fopen(argv[2], "r");
+	if(fileTest == NULL)
+	{
+		fprintf(stderr, "Unable to open file: %s\n", argv[2]);
+		exit(1);
+	}
+	fclose(fileTest);
 
 	//basic options
 	char* checksumVersion = argv[1];
@@ -98,7 +106,7 @@ int main(int argc, char* argv[])
 }
 
 //check with a given hash function if the inputted hash matches
-int checkHash(char* commandString, char* filePath, char* hash)
+int checkHash(const char* commandString, const char* filePath, char* hash)
 {
 	//assemble command
 	char command[BUFF_SIZE];
@@ -138,7 +146,7 @@ int checkHash(char* commandString, char* filePath, char* hash)
 }
 
 //check if the two hashes are identical
-int checkMatch(char* hashA, char* hashB)
+int checkMatch(const char* hashA, const char* hashB)
 {
 	int maxlen = strlen(hashA);
 	if(strlen(hashB) < maxlen)
@@ -179,7 +187,7 @@ void printHelpText()
 }
 
 //sanitize string (escape with quotes to hopefully prevent attacks)
-void sanitize(char* dest, char* src, int sz)
+void sanitize(char* dest, const char* src, int sz)
 {
 	memset(dest, 0, sz);
 	strcat(dest, "\"");
